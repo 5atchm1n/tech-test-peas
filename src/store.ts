@@ -36,7 +36,7 @@ export function Restrict(...permissions: Permission[]): any {
 
 export class Store implements IStore {
   defaultPolicy: Permission = "rw";
-  private data: JSONObject = {};
+  private data: StoreValue = {};
 
 
   allowedToRead(key: string): boolean {
@@ -61,7 +61,6 @@ export class Store implements IStore {
     const keyFragment = keys.slice(1).join(":");
     const data: any = this;
 
-    // check inheritance
     if (keys.length > 1 && data[primaryKey] instanceof Store) {
       return data[primaryKey].read(keyFragment);
     }
@@ -70,7 +69,7 @@ export class Store implements IStore {
       throw new Error('No permission for read');
     }
 
-    const result = keys.length > 1 ? this._Read(keys, this) : data[primaryKey]
+    const result = !this._isFinalKey(keys) ? this._Read(keys, this) : data[primaryKey]
 
     return result instanceof Function ? result() : result;
   }
@@ -78,10 +77,12 @@ export class Store implements IStore {
   write(path: string, value: StoreValue): StoreValue {
     const keys = this._splitPath(path);
     const primaryKey = keys[0];
+    const keyFragment = keys.slice(1).join(":");
+
     const data: any = this;
 
-    if (keys.length > 1 && data[primaryKey] instanceof Store) {
-      return data[primaryKey].write(keys.slice(1).join(':'), value);
+    if (!this._isFinalKey(keys) && data[primaryKey] instanceof Store) {
+      return data[primaryKey].write(keyFragment, value);
     }
 
     if (!this.allowedToWrite(primaryKey)) {
