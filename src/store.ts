@@ -24,51 +24,28 @@ export interface IStore {
 
 
 
-export function Restrict(...params: any[]): any {
-
-  return function (target: any, key: any, descriptor: PropertyDescriptor) {
-    let value = target[key];
-
-    const getter = function () {
-      return value;
-    };
-
-    const setter = function (newVal: any) {
-      value = newVal;
-    };
-
-    if (delete target[key]) {
-      Object.defineProperty(target, key, {
-        get: getter,
-        set: setter,
-        enumerable: true,
-        configurable: true
-      });
+export function Restrict(...permission: Permission[]): any {
+  return function (target: IStore, key: string) {
+    if (permission.length === 0) {
+      permission = [target.defaultPolicy];
     }
-  };
+    Reflect.defineMetadata("permissions", permission, target, key);
+  }
 }
 
 export class Store implements IStore {
   defaultPolicy: Permission = "rw";
-  private data: any = {};
+  private data: JSONObject = {};
 
 
   allowedToRead(key: string): boolean {
-    const descriptor = Object.getOwnPropertyDescriptor(this, key);
-    if (descriptor && descriptor.get) {
-      console.log(descriptor.get());
-      return descriptor.get().includes("r");
-    }
-    return this.defaultPolicy.includes("r");
+    const permissions: Permission[] = Reflect.getMetadata("permissions", this, key);
+    return permissions.includes("r") || permissions.includes("rw");
   }
 
   allowedToWrite(key: string): boolean {
-    // throw new Error("Method not implemented.");
-    const descriptor = Object.getOwnPropertyDescriptor(this, key);
-    if (descriptor && descriptor.get) {
-      return descriptor.get().includes("w");
-    }
-    return this.defaultPolicy.includes("w");
+    const permissions: Permission[] = Reflect.getMetadata("permissions", this, key);
+    return permissions.includes("w") || permissions.includes("rw");
   }
 
   read(path: string): StoreResult {
