@@ -1,3 +1,5 @@
+import "reflect-metadata";
+
 import { JSONArray, JSONObject, JSONPrimitive } from "./json-types";
 
 export type Permission = "r" | "w" | "rw" | "none";
